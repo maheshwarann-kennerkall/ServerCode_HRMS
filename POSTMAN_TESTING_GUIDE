@@ -1,0 +1,296 @@
+# Postman Testing Guide - HRMS Service API
+
+## 🔧 Service Status
+The HRMS service is running on: **http://localhost:8003**
+
+## 🔑 Authentication Setup
+
+### Step 1: Get JWT Token
+First, you need a valid JWT token. Since the service expects JWT authentication, you'll need to get a token from your existing auth service (likely the authService).
+
+**Example Auth Request:**
+```
+POST http://localhost:8002/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "your-email@example.com",
+  "password": "your-password"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user-uuid",
+    "email": "your-email@example.com",
+    "role": "admin",
+    "name": "Admin User"
+  }
+}
+```
+
+### Step 2: Add Authorization Header
+In Postman, add this to your requests:
+- **Key:** `Authorization`
+- **Value:** `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (use your actual token)
+
+## 🧪 API Testing Endpoints
+
+### 1. Health Check (No Auth Required)
+**Test First:**
+```
+GET http://localhost:8003/health
+```
+
+**Expected Response:**
+```json
+{
+  "status": "HRMS Service is running",
+  "timestamp": "2025-11-24T03:23:34.031Z",
+  "service": "HRMSService",
+  "port": 8003
+}
+```
+
+### 2. Get Deduction Types (Requires Auth)
+```
+GET http://localhost:8003/api/deduction-types
+Authorization: Bearer <your-jwt-token>
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "deduction-type-uuid",
+      "name": "Provident Fund",
+      "code": "PF",
+      "description": "Employee Provident Fund contribution",
+      "is_active": true,
+      "created_at": "2025-11-24T03:20:00.000Z"
+    },
+    {
+      "id": "esi-type-uuid",
+      "name": "Employee State Insurance",
+      "code": "ESI",
+      "description": "ESI contribution for employee",
+      "is_active": true,
+      "created_at": "2025-11-24T03:20:00.000Z"
+    }
+  ]
+}
+```
+
+### 3. Get All Deduction Templates
+```
+GET http://localhost:8003/api/deduction-templates
+Authorization: Bearer <your-jwt-token>
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "template-uuid",
+      "template_name": "Teacher Standard Deductions",
+      "employee_type": "teacher",
+      "description": "Standard statutory deductions for teaching staff",
+      "is_active": true,
+      "deductions": [
+        {
+          "id": "item-uuid",
+          "deduction_type_id": "pf-type-uuid",
+          "calculation_type": "percentage",
+          "calculation_value": 12.00,
+          "is_mandatory": true,
+          "deduction_types": {
+            "id": "pf-type-uuid",
+            "name": "Provident Fund",
+            "code": "PF"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 4. Create New Deduction Template
+```
+POST http://localhost:8003/api/deduction-templates
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "template_name": "Custom Teacher Deductions",
+  "employee_type": "teacher",
+  "description": "Custom deductions for specific teachers",
+  "deductions": [
+    {
+      "deduction_type_id": "pf-type-uuid",
+      "calculation_type": "percentage",
+      "calculation_value": 10.00,
+      "is_mandatory": true
+    },
+    {
+      "deduction_type_id": "esi-type-uuid",
+      "calculation_type": "percentage",
+      "calculation_value": 0.75,
+      "is_mandatory": true
+    }
+  ]
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Deduction template created successfully",
+  "data": {
+    "templateId": "new-template-uuid",
+    "template_name": "Custom Teacher Deductions",
+    "employee_type": "teacher",
+    "deductions_count": 2
+  }
+}
+```
+
+### 5. Get Specific Template
+```
+GET http://localhost:8003/api/deduction-templates/{template-id}
+Authorization: Bearer <your-jwt-token>
+```
+
+### 6. Update Template
+```
+PUT http://localhost:8003/api/deduction-templates/{template-id}
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "template_name": "Updated Teacher Deductions",
+  "employee_type": "teacher",
+  "description": "Updated description",
+  "deductions": [
+    {
+      "deduction_type_id": "pf-type-uuid",
+      "calculation_type": "percentage",
+      "calculation_value": 12.00,
+      "is_mandatory": true
+    }
+  ]
+}
+```
+
+### 7. Delete Template (Soft Delete)
+```
+DELETE http://localhost:8003/api/deduction-templates/{template-id}
+Authorization: Bearer <your-jwt-token>
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Deduction template deleted successfully",
+  "data": {
+    "templateId": "deleted-template-uuid",
+    "template_name": "Updated Teacher Deductions"
+  }
+}
+```
+
+## 🔍 Postman Collection Setup
+
+### Step 1: Create Collection
+1. Open Postman
+2. Click "New Collection"
+3. Name it: "HRMS Service API"
+4. Set base URL: `http://localhost:8003`
+
+### Step 2: Add Pre-request Script
+Add this to your collection for automatic token handling:
+
+```javascript
+// Pre-request Script
+if (!pm.collectionVariables.get("token")) {
+    console.log("⚠️ No token found. Please set token manually or add auth endpoint.");
+} else {
+    pm.request.headers.add({
+        key: 'Authorization',
+        value: `Bearer ${pm.collectionVariables.get("token")}`
+    });
+}
+```
+
+### Step 3: Environment Variables
+Set these variables in your environment:
+- `baseUrl`: `http://localhost:8003`
+- `token`: `<your-jwt-token>`
+
+## 📝 Test Scenarios
+
+### Positive Test Cases
+1. ✅ **Health Check** - Service is running
+2. ✅ **Get Deduction Types** - Should return array of types
+3. ✅ **Create Template** - Should return success with new ID
+4. ✅ **Get Template** - Should return full template with deductions
+5. ✅ **Update Template** - Should return success message
+6. ✅ **Delete Template** - Should soft delete (set is_active = false)
+
+### Negative Test Cases
+1. ❌ **No Auth Token** - Should return 401 Unauthorized
+2. ❌ **Invalid Token** - Should return 403 Forbidden
+3. ❌ **Insufficient Role** - Should return 403 Forbidden
+4. ❌ **Invalid Template ID** - Should return 404 Not Found
+5. ❌ **Missing Required Fields** - Should return 400 Bad Request
+6. ❌ **Invalid Employee Type** - Should return 400 Bad Request
+
+## 🚨 Common Issues & Solutions
+
+### Issue 1: 401 Unauthorized
+**Problem:** No valid JWT token
+**Solution:** Get token from auth service and add to Authorization header
+
+### Issue 2: 403 Forbidden
+**Problem:** Insufficient permissions
+**Solution:** Ensure user role is 'admin' or 'hr'
+
+### Issue 3: 500 Internal Server Error
+**Problem:** Database connection or query error
+**Solution:** Check database connection and table existence
+
+### Issue 4: 400 Bad Request
+**Problem:** Invalid request data
+**Solution:** Check required fields and data types
+
+## 📊 Response Codes Reference
+
+| Code | Meaning | When it occurs |
+|------|---------|----------------|
+| 200 | Success | GET, PUT operations |
+| 201 | Created | POST operations |
+| 400 | Bad Request | Invalid data |
+| 401 | Unauthorized | Missing/invalid token |
+| 403 | Forbidden | Insufficient permissions |
+| 404 | Not Found | Invalid ID |
+| 500 | Internal Error | Server/database error |
+
+## 🔧 Testing Tips
+
+1. **Start with Health Check** - Always test first
+2. **Test Auth Flow** - Verify token retrieval works
+3. **Use Sample Data** - Start with creating templates using existing deduction types
+4. **Check Console Logs** - Monitor server logs for detailed error messages
+5. **Test Edge Cases** - Try invalid data to ensure proper error handling
+
+You're all set to test the HRMS API in Postman! 🚀

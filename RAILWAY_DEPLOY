@@ -1,0 +1,164 @@
+# Railway Deployment Guide - HRMS Service
+
+## 🎉 Deployment Success!
+
+Now that your HRMS service is deployed on Railway, here's what you need to configure:
+
+## 🔧 Environment Variables Setup
+
+### In Railway Dashboard:
+1. Go to your project settings
+2. Navigate to **Variables** tab
+3. Add these environment variables:
+
+```env
+DB_HOST=your-production-db-host
+DB_PORT=5432
+DB_NAME=your-production-db-name
+DB_USER=your-production-db-user
+DB_PASSWORD=your-production-db-password
+JWT_SECRET=your-super-secret-jwt-key-for-production
+NODE_ENV=production
+PORT=8003
+```
+
+### Database Connection
+For Railway, you might want to use:
+- **Neon.tech** (PostgreSQL) - Recommended for Railway
+- **Supabase** (your existing database)
+- **Railway PostgreSQL** add-on
+
+## 🚀 Getting Your Deployment URL
+
+### Step 1: Find Your Service URL
+In Railway dashboard:
+1. Go to your service
+2. Click on **Deployments**
+3. Find the latest deployment
+4. Look for the **URL** section
+
+Your service will be available at something like:
+```
+https://your-app-name-production.up.railway.app
+```
+
+### Step 2: Test Health Check
+Replace `localhost:8003` with your Railway URL:
+```
+GET https://your-app-name-production.up.railway.app/health
+```
+
+## 📡 API Endpoints Testing
+
+### Update Your API Base URL
+Change from:
+```
+http://localhost:8003
+```
+
+To your Railway URL:
+```
+https://your-app-name-production.up.railway.app
+```
+
+### Test All Endpoints
+```
+GET https://your-app-name-production.up.railway.app/api/deduction-types
+GET https://your-app-name-production.up.railway.app/api/deduction-templates
+POST https://your-app-name-production.up.railway.app/api/deduction-templates
+```
+
+## 🔑 JWT Authentication in Production
+
+### Getting Production JWT Token
+You'll need to get a JWT token from your auth service (also deployed):
+```
+POST https://your-auth-service-production.up.railway.app/api/auth/login
+```
+
+### Authorization Header
+```
+Authorization: Bearer <production-jwt-token>
+```
+
+## 📊 Deployment Monitoring
+
+### Check Logs
+In Railway dashboard:
+1. Go to your service
+2. Click on **Deployments**
+3. Click on the latest deployment
+4. View logs for any issues
+
+### Common Issues & Solutions
+
+#### Issue 1: Database Connection Failed
+**Problem:** Can't connect to database
+**Solution:** 
+- Verify environment variables are set correctly
+- Check if database is accessible from Railway network
+- Ensure database SSL settings
+
+#### Issue 2: JWT Token Verification Failed
+**Problem:** Token validation fails
+**Solution:**
+- Ensure JWT_SECRET matches between services
+- Check token expiration time
+- Verify token format
+
+#### Issue 3: CORS Issues
+**Problem:** Cross-origin requests blocked
+**Solution:**
+Update your frontend to use the Railway URL instead of localhost
+
+## 🌍 Frontend Integration Update
+
+### Update API Base URL
+In your React app, update the API client:
+
+```javascript
+const API_BASE_URL = 'https://your-app-name-production.up.railway.app';
+
+// OR use environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://your-app-name-production.up.railway.app';
+```
+
+### Environment Variables
+Create `.env.production`:
+```
+REACT_APP_API_URL=https://your-app-name-production.up.railway.app
+```
+
+## 🔒 Security Checklist
+
+- [ ] ✅ JWT_SECRET is secure and not exposed
+- [ ] ✅ Database credentials are secure
+- [ ] ✅ CORS settings are configured properly
+- [ ] ✅ Rate limiting is in place (consider adding)
+- [ ] ✅ HTTPS is enforced (Railway provides this automatically)
+
+## 🚀 Next Steps
+
+1. **Test the deployed service** with your Railway URL
+2. **Update frontend** to use production URLs
+3. **Set up monitoring** and logging
+4. **Configure custom domain** if needed
+5. **Set up CI/CD** for automatic deployments
+
+## 📞 Railway-Specific Notes
+
+### Build Commands
+Railway should automatically detect:
+- Build: `npm install`
+- Start: `npm start` (make sure this is in your package.json)
+
+### Port Configuration
+Railway sets the PORT environment variable automatically. Your service should use:
+```javascript
+const PORT = process.env.PORT || 8003;
+```
+
+### Health Checks
+Railway can use your `/health` endpoint for deployment verification.
+
+🎉 **Congratulations on your successful deployment!**
