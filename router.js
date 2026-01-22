@@ -37,6 +37,38 @@ const checkRole = (...roles) => {
   };
 };
 
+// Module access check
+const checkModule = (moduleCode) => {
+  return async (req, res, next) => {
+    try {
+      // Skip check for superadmin
+      if (req.user.role === 'superadmin') {
+        return next();
+      }
+
+      const result = await pool.query(`
+        SELECT bm.is_enabled
+        FROM superadmin.branch_modules bm
+        JOIN public.modules m ON bm.module_id = m.id
+        WHERE bm.branch_id = $1 AND m.module_code = $2 AND m.is_active = true
+      `, [req.user.branchId, moduleCode]);
+
+      if (result.rows.length === 0 || !result.rows[0].is_enabled) {
+        return res.status(403).json({
+          success: false,
+          error: `Module '${moduleCode}' is not enabled for your branch`
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Module check error:', error);
+      // Allow access if check fails (to avoid blocking due to db issues)
+      next();
+    }
+  };
+};
+
 // GET /api/deduction-types - Get all deduction types
 router.get('/deduction-types', authenticateToken, async (req, res) => {
   try {
@@ -75,7 +107,7 @@ router.get('/deduction-types', authenticateToken, async (req, res) => {
 });
 
 // GET /api/deduction-templates - Get all deduction templates
-router.get('/deduction-templates', authenticateToken, checkRole('admin', 'hr', 'teacher', 'staff'), async (req, res) => {
+router.get('/deduction-templates', authenticateToken, checkModule('HRMS'), checkRole('admin', 'hr', 'teacher', 'staff'), async (req, res) => {
   try {
     console.log('📋 Fetching deduction templates...');
     
@@ -150,7 +182,7 @@ router.get('/deduction-templates', authenticateToken, checkRole('admin', 'hr', '
 });
 
 // POST /api/deduction-templates - Create new deduction template
-router.post('/deduction-templates', authenticateToken, checkRole('admin', 'hr'), async (req, res) => {
+router.post('/deduction-templates', authenticateToken, checkModule('HRMS'), checkRole('admin', 'hr'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -289,7 +321,7 @@ router.post('/deduction-templates', authenticateToken, checkRole('admin', 'hr'),
 });
 
 // GET /api/deduction-templates/:id - Get specific template
-router.get('/deduction-templates/:id', authenticateToken, checkRole('admin', 'hr', 'teacher', 'staff'), async (req, res) => {
+router.get('/deduction-templates/:id', authenticateToken, checkModule('HRMS'), checkRole('admin', 'hr', 'teacher', 'staff'), async (req, res) => {
   try {
     console.log('📋 Fetching deduction template:', req.params.id);
     
@@ -361,7 +393,7 @@ router.get('/deduction-templates/:id', authenticateToken, checkRole('admin', 'hr
 });
 
 // PUT /api/deduction-templates/:id - Update template
-router.put('/deduction-templates/:id', authenticateToken, checkRole('admin', 'hr'), async (req, res) => {
+router.put('/deduction-templates/:id', authenticateToken, checkModule('HRMS'), checkRole('admin', 'hr'), async (req, res) => {
   const client = await pool.connect();
 
   try {
@@ -486,7 +518,7 @@ router.put('/deduction-templates/:id', authenticateToken, checkRole('admin', 'hr
 });
 
 // DELETE /api/deduction-templates/:id - Soft delete template
-router.delete('/deduction-templates/:id', authenticateToken, checkRole('admin', 'hr'), async (req, res) => {
+router.delete('/deduction-templates/:id', authenticateToken, checkModule('HRMS'), checkRole('admin', 'hr'), async (req, res) => {
   try {
     console.log('🗑️ SOFT DELETING DEDUCTION TEMPLATE:', req.params.id);
 
