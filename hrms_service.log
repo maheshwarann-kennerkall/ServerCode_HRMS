@@ -1,0 +1,4 @@
+[dotenv@17.2.3] injecting env (9) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+🚀 HRMS Service running on port 8005
+📍 Health check: http://localhost:8005/health
